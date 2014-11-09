@@ -1,0 +1,58 @@
+My monitor design consists of several methods, the functionality of which is described below. In those functions there are also statistics counters and times which I did not describe. 
+
+customer_thread() represents customer thread. it keeps oscillating between sleeping for 10 seconds (that's when customers keep 
+growing their hair) and then calling customer() which represents the customer trying to enter the shop
+
+barber_thread() represents barber thread, it calls barber() which never returns - the barber thread is always executing. 
+
+FLAGS:
+barber_chair_empty - boolean representing whether anyone is sitting on barber chair
+BARBER_ASLEEP - boolean representing whether the barber is asleep
+COUNTERS
+num_people_in_shop - stores the number of customers in the shop
+
+CONDITIONS:
+wake_barber
+sit_on_barber_chair
+barber_action
+get_off_barber_chair
+
+barber()
+Only one thread can be inside this method at one time which is guarenteed by locking a mutex at the beginning of this function and unlicking it at the end. This function never returns which is guaranteed by while(1) loop inside which the logic for the barber is written. The logic starts with checking whether one of the two cases hold:
+1. barber chair is empty and there are no customers in the shop
+2. barber chair is not empty and there is only one customer in the shop (the one sitting on the barber chair)
+If any of these two conditions is true, some status flags are set and the barber goes to sleep. The first condition is self explanatory. The second condition can only happen if the customer just received a haircut from the barber. The barber goes to sleep by performing a wait for the signal wake_barber - this signal will be sent by a customer who wants to wake up the barber inside the customer() function. After that happens, the barber sends a signal sit_on_barber_chair which notifies a customer that the barber chair is now ready to be used. 
+After this check (whether the barber just woke up or whether the check returned false), the flag for barber_asleep is set to false (which can be used by customers to know that the barber is awake) and the barber now goes into waiting mode for signal barber_action. If barber receives this signal, it means there is a customer who wants the barber to perform a haircut. the barber then performs the haircut (1.2 seconds on avg, callung sleep_exp()) and then signals get_off_barber_chair to let some customer know to get off the barber chair and leave the shop. After this the barber goes back to check if he should go to sleep or wait for next customer to give the haircut to.
+
+
+
+customer() Only one thread can be inside this method at one time which is guarenteed by locking a mutex at the beginning of this function and unlocking it at the end.
+
+the first thing the customer does is to check whether he/she can enter the shop - if there are already a max number of customers in the shop then he/she leaves the shop without doing anything by unlocking the mutex and returning. otherwise, the num_people_in_shop is incremented to keep track that a new customer entered. the customer then checks if the barber is asleep,
+1. if the barber is asleep, the customer sends the signal wake_barber to wake up the barber and then goes to sleep to wait for signal sit_on_barber_chair from the barber - the barber will send it after he wakes up or after another customer gets off the barber chair. 
+
+if the barber was not asleep, the customer then checks to make sure that barber is not asleep again (since there might have been another customer who tried to enter after this customer went to sleep) and whether there is anyone sitting on the barber chair. If someone is sitting on the barber chair, the customer starts waiting for signal from barber telling him that he can now sit on the barber chair sit_on_barber_chair. Once the barber chair is empty and this customer was awaken, he sets the flag  barber_chair_empty to false and sits on the barber chair (so that other customers can't sit on it). the customer then signals the barber to make an action (make haircut) by sending signal barber_action and then customer starts waiting for get_off_barber_chair signal which will let him know the haircut was done and he should leave the barber chair.  The customer then notifies another customer that he is leaving by sending a signal sit_on_barber_chair and leaves the shop. 
+
+q2()  this is the method which is called first when executing the program. Its goal is to create one barber thread (using barber_thread() )and 10 customer threads (using customer_thread() ) and then wait until the program stops running (after the time specified as one of the args)
+
+q3() very similar to q2(), contains additional timers and counters to calculate statistics
+
+
+
+
+Your design should identify all condition variables and other instance variables, and describe the
+operation and logic of each method. It is not code
+–
+please leave out the curly braces, and focus on describing
+what your code is going to do , not what your code is
+
+Remember the following characteristics of the monitor definition used in this class:
+•
+Only one thread can be in the monitor at a time; threads enter the monitor at the beginning of a method or when returning from
+wait(), and leave the monitor by returning from a method or entering wait()
+
+This means there is no preemption – a thread in a method executes without interruption until it returns or waits.
+•
+When thread A calls signal() to release thread B from waiting on a condition variable, you don't
+know whether B will run before or after some thread C that tries to enter the method at the same
+time. (that's why they're called race conditions)• You don't need a separate mutex – this is a monitor, not a pthreads translation of a monitor.

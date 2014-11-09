@@ -1,0 +1,17 @@
+ERROR: Illegal lines:
+--> DEBUG: 62.328325 customer 7 enters shop
+State:
+number in shop: 0
+customer 0: outside shop
+customer 1: outside shop
+customer 2: outside shop
+customer 3: outside shop
+customer 4: outside shop
+customer 5: outside shop
+customer 6: outside shop
+customer 7: outside shop
+customer 8: outside shop
+customer 9: outside shop
+barber:  awake
+--> DEBUG: 62.456504 customer 4 enters shop
+FAILED
